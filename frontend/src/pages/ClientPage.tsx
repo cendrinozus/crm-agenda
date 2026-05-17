@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { format, parseISO, isPast, isToday, differenceInMinutes } from 'date-fns'
-import { fr } from 'date-fns/locale'
 import {
   ArrowLeft, Edit2, Phone, Mail, Building2, ChevronDown, ChevronUp,
   MapPin, Clock, Users, Check, X
@@ -10,18 +10,22 @@ import {
 import { clientsApi } from '../services/api'
 import { MeetingNoteEditor } from '../components/features/MeetingNoteEditor'
 import { ClientWorkflow } from '../components/features/ClientWorkflow'
+import { useDateLocale } from '../hooks/useDateLocale'
 
 function StatusBadge({ start }: { start: string }) {
+  const { t } = useTranslation()
   const dt = parseISO(start)
-  if (isToday(dt)) return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Aujourd'hui</span>
-  if (isPast(dt))  return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-100 text-surface-500">Passé</span>
-  return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">À venir</span>
+  if (isToday(dt)) return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">{t('client.today')}</span>
+  if (isPast(dt))  return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-100 text-surface-500">{t('client.past')}</span>
+  return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t('client.upcoming')}</span>
 }
 
 export function ClientPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { t } = useTranslation()
+  const dateLocale = useDateLocale()
   const [expandedMeeting, setExpandedMeeting] = useState<number | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [editData, setEditData] = useState<any>({})
@@ -55,7 +59,7 @@ export function ClientPage() {
   })
 
   if (isLoading) return (
-    <div className="p-8 text-surface-400 text-sm">Chargement…</div>
+    <div className="p-8 text-surface-400 text-sm">{t('client.loading')}</div>
   )
   if (!client) return null
 
@@ -67,7 +71,7 @@ export function ClientPage() {
     <div className="p-8 max-w-4xl mx-auto">
       {/* Back */}
       <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-surface-500 hover:text-surface-800 mb-6 transition-colors">
-        <ArrowLeft size={15} /> Retour
+        <ArrowLeft size={15} /> {t('common.back')}
       </button>
 
       {/* Header */}
@@ -100,12 +104,12 @@ export function ClientPage() {
                   <button onClick={() => updateMutation.mutate(editData)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500 text-white
                                rounded-lg text-sm hover:bg-brand-400 transition-colors">
-                    <Check size={13} /> Enregistrer
+                    <Check size={13} /> {t('common.save')}
                   </button>
                   <button onClick={() => setEditMode(false)}
                     className="flex items-center gap-1.5 px-3 py-1.5 border border-surface-200
                                rounded-lg text-sm text-surface-600 hover:bg-surface-50 transition-colors">
-                    <X size={13} /> Annuler
+                    <X size={13} /> {t('common.cancel')}
                   </button>
                 </div>
               </div>
@@ -131,27 +135,27 @@ export function ClientPage() {
           <div className="flex gap-6 text-center shrink-0">
             <div>
               <p className="text-xl font-semibold text-surface-900">{meetings.length}</p>
-              <p className="text-xs text-surface-400">RDV total</p>
+              <p className="text-xs text-surface-400">{t('client.totalMeetings')}</p>
             </div>
             <div>
               <p className="text-xl font-semibold text-green-600">{upcomingMeetings.length}</p>
-              <p className="text-xs text-surface-400">À venir</p>
+              <p className="text-xs text-surface-400">{t('client.upcoming')}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Workflow de progression */}
+      {/* Workflow */}
       <ClientWorkflow
         clientId={Number(id)}
         workflowStage={client.workflow_stage ?? null}
         onStageChange={(stage) => workflowMutation.mutate(stage)}
       />
 
-      {/* Meetings timeline — Compte rendu & notes */}
+      {/* Meetings timeline */}
       {[
-        { label: 'À venir', items: upcomingMeetings, accent: 'border-l-accent-500' },
-        { label: 'Passés',  items: pastMeetings,     accent: 'border-l-surface-200' },
+        { label: t('client.upcoming'), items: upcomingMeetings, accent: 'border-l-accent-500' },
+        { label: t('client.past'),     items: pastMeetings,     accent: 'border-l-surface-200' },
       ].map(({ label, items, accent }) => items.length > 0 && (
         <div key={label} className="mb-8">
           <h2 className="text-sm font-semibold text-surface-600 uppercase tracking-wider mb-3">
@@ -178,7 +182,7 @@ export function ClientPage() {
                     {dt && (
                       <div className="text-center shrink-0 w-12">
                         <p className="text-lg font-semibold text-surface-900 leading-none">{format(dt, 'd')}</p>
-                        <p className="text-xs text-surface-500">{format(dt, 'MMM', { locale: fr })}</p>
+                        <p className="text-xs text-surface-500">{format(dt, 'MMM', { locale: dateLocale })}</p>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -204,7 +208,7 @@ export function ClientPage() {
                                 : <ChevronDown size={16} className="text-surface-400 shrink-0 mt-0.5" />}
                   </button>
 
-                  {/* Expanded — Compte rendu & notes */}
+                  {/* Expanded */}
                   {isExpanded && (
                     <div className="px-4 pb-4 border-t border-surface-100">
                       <div className="pt-4">
@@ -225,7 +229,7 @@ export function ClientPage() {
 
       {meetings.length === 0 && (
         <div className="text-center py-16 text-surface-400 text-sm">
-          Aucun rendez-vous pour ce client · Synchronisez votre agenda
+          {t('client.noMeetings')}
         </div>
       )}
     </div>

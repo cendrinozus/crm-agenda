@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, Settings2, Plus, Trash2, X } from 'lucide-react'
 import { useWorkflowSteps, WorkflowStep } from '../../hooks/useWorkflowSteps'
 
@@ -9,9 +10,10 @@ interface Props {
 }
 
 export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
+  const { t } = useTranslation()
   const { steps, updateSteps } = useWorkflowSteps()
-  const [configMode, setConfigMode]   = useState(false)
-  const [editLabels, setEditLabels]   = useState<WorkflowStep[]>([])
+  const [configMode, setConfigMode] = useState(false)
+  const [editLabels, setEditLabels] = useState<WorkflowStep[]>([])
 
   const currentIdx = steps.findIndex(s => s.id === workflowStage)
   const isFinished = currentIdx === steps.length - 1 && workflowStage !== null
@@ -35,7 +37,7 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
   }
 
   function addStep() {
-    setEditLabels(prev => [...prev, { id: Date.now().toString(), label: 'Nouvelle étape' }])
+    setEditLabels(prev => [...prev, { id: Date.now().toString(), label: t('workflow.newStep') }])
   }
 
   function removeStep(id: string) {
@@ -51,7 +53,7 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
     return (
       <div className="bg-white rounded-2xl border border-surface-200 shadow-card p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-surface-800">Configurer les étapes</h3>
+          <h3 className="text-sm font-semibold text-surface-800">{t('workflow.configure')}</h3>
           <button onClick={() => setConfigMode(false)} className="text-surface-400 hover:text-surface-700 transition-colors">
             <X size={16} />
           </button>
@@ -66,7 +68,7 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
                 onChange={e => updateLabel(step.id, e.target.value)}
                 className="flex-1 px-3 py-1.5 text-sm border border-surface-200 rounded-lg
                            focus:outline-none focus:ring-2 focus:ring-brand-400"
-                placeholder="Nom de l'étape"
+                placeholder={t('workflow.stepName')}
               />
               <button
                 onClick={() => removeStep(step.id)}
@@ -86,14 +88,14 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
                        border border-dashed border-surface-300 rounded-lg
                        hover:border-brand-400 hover:text-brand-500 transition-colors"
           >
-            <Plus size={14} /> Ajouter une étape
+            <Plus size={14} /> {t('workflow.addStep')}
           </button>
           <button
             onClick={saveConfig}
             className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-brand-500 text-white
                        rounded-lg hover:bg-brand-400 transition-colors ml-auto"
           >
-            <Check size={14} /> Enregistrer
+            <Check size={14} /> {t('workflow.save')}
           </button>
         </div>
       </div>
@@ -105,17 +107,17 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
     <div className="bg-white rounded-2xl border border-surface-200 shadow-card p-5 mb-6">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-surface-800">Progression du dossier</h3>
+          <h3 className="text-sm font-semibold text-surface-800">{t('workflow.title')}</h3>
           {isFinished && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-              Complété ✓
+              {t('workflow.completed')}
             </span>
           )}
         </div>
         <button
           onClick={openConfig}
           className="text-surface-300 hover:text-brand-500 transition-colors"
-          title="Configurer le workflow"
+          title={t('workflow.configure')}
         >
           <Settings2 size={15} />
         </button>
@@ -132,7 +134,7 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
               <div className="flex flex-col items-center w-full">
                 <button
                   onClick={() => selectStep(step.id)}
-                  title={`Marquer : ${step.label}`}
+                  title={t('workflow.mark', { label: step.label })}
                   className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-200
                     ${current
                       ? 'bg-brand-500 border-brand-500 text-white shadow-[0_0_0_4px_theme(colors.brand.100)] scale-110'
@@ -167,7 +169,7 @@ export function ClientWorkflow({ workflowStage, onStageChange }: Props) {
 
       {!workflowStage && (
         <p className="text-xs text-surface-400 text-center mt-4">
-          Cliquez sur une étape pour positionner ce client dans le workflow
+          {t('workflow.hint')}
         </p>
       )}
     </div>

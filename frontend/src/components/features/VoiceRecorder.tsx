@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Mic, Square, Loader2, CheckCircle } from 'lucide-react'
 import { voiceApi } from '../../services/api'
 
@@ -10,6 +11,7 @@ interface Props {
 type RecordState = 'idle' | 'recording' | 'processing' | 'done'
 
 export function VoiceRecorder({ meetingId, onTranscript }: Props) {
+  const { t } = useTranslation()
   const [state, setState] = useState<RecordState>('idle')
   const [seconds, setSeconds] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +38,7 @@ export function VoiceRecorder({ meetingId, onTranscript }: Props) {
           setState('done')
           setTimeout(() => { setState('idle'); setSeconds(0) }, 2000)
         } catch {
-          setError('Échec de la transcription.')
+          setError(t('meeting.transcriptFailed'))
           setState('idle')
         }
       }
@@ -46,9 +48,9 @@ export function VoiceRecorder({ meetingId, onTranscript }: Props) {
       setSeconds(0)
       timer.current = setInterval(() => setSeconds(s => s + 1), 1000)
     } catch {
-      setError('Accès microphone refusé.')
+      setError(t('meeting.micDenied'))
     }
-  }, [meetingId, onTranscript])
+  }, [meetingId, onTranscript, t])
 
   const stopRecording = useCallback(() => {
     mediaRecorder.current?.stop()
@@ -65,7 +67,7 @@ export function VoiceRecorder({ meetingId, onTranscript }: Props) {
                      text-sm text-surface-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600
                      transition-all"
         >
-          <Mic size={14} /> Dicter une note
+          <Mic size={14} /> {t('meeting.dictate')}
         </button>
       )}
 
@@ -76,20 +78,20 @@ export function VoiceRecorder({ meetingId, onTranscript }: Props) {
                      bg-red-50 text-sm text-red-600 hover:bg-red-100 transition-all animate-pulse"
         >
           <span className="w-2 h-2 rounded-full bg-red-500" />
-          {fmt(seconds)} — Arrêter
+          {fmt(seconds)} — {t('meeting.stop')}
           <Square size={12} />
         </button>
       )}
 
       {state === 'processing' && (
         <div className="flex items-center gap-2 text-sm text-surface-500">
-          <Loader2 size={14} className="animate-spin" /> Transcription…
+          <Loader2 size={14} className="animate-spin" /> {t('meeting.transcribing')}
         </div>
       )}
 
       {state === 'done' && (
         <div className="flex items-center gap-2 text-sm text-green-600">
-          <CheckCircle size={14} /> Transcrit !
+          <CheckCircle size={14} /> {t('meeting.transcribed')}
         </div>
       )}
 

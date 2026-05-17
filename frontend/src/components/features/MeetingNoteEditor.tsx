@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Save, Loader2, ChevronDown, ChevronUp, ListTodo } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Sparkles, Save, Loader2, ChevronDown, ListTodo } from 'lucide-react'
 import { notesApi, aiApi } from '../../services/api'
 import { VoiceRecorder } from './VoiceRecorder'
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [noteText, setNoteText]       = useState(note?.note_text || '')
   const [nextActions, setNextActions] = useState(note?.next_actions || '')
@@ -70,15 +72,15 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Notes section */}
+      {/* Notes */}
       <div>
         <label className="text-xs font-medium text-surface-500 uppercase tracking-wider block mb-1.5">
-          Compte rendu & notes
+          {t('meeting.notes')}
         </label>
         <textarea
           value={noteText}
           onChange={e => setNoteText(e.target.value)}
-          placeholder="Ce qui a été discuté, décisions prises, points importants…"
+          placeholder={t('meeting.notesPH')}
           rows={4}
           className="w-full px-3 py-2.5 text-sm bg-surface-50 border border-surface-200
                      rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400
@@ -89,12 +91,12 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
       {/* Next actions */}
       <div>
         <label className="text-xs font-medium text-surface-500 uppercase tracking-wider block mb-1.5">
-          Prochaines actions
+          {t('meeting.nextActions')}
         </label>
         <textarea
           value={nextActions}
           onChange={e => setNextActions(e.target.value)}
-          placeholder="- Envoyer le document avant vendredi&#10;- Planifier la prochaine réunion&#10;- Préparer la matrice des risques"
+          placeholder={t('meeting.nextActionsPH')}
           rows={3}
           className="w-full px-3 py-2.5 text-sm bg-surface-50 border border-surface-200
                      rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400
@@ -105,7 +107,7 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
       {/* Transcript display */}
       {note?.transcript && (
         <div className="bg-surface-50 border border-surface-200 rounded-xl p-3">
-          <p className="text-xs font-medium text-surface-400 mb-1">Transcription vocale</p>
+          <p className="text-xs font-medium text-surface-400 mb-1">{t('meeting.voiceTranscript')}</p>
           <p className="text-sm text-surface-700">{note.transcript}</p>
         </div>
       )}
@@ -116,7 +118,6 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
 
         <div className="flex-1" />
 
-        {/* AI buttons */}
         <button
           onClick={() => aiSummaryMutation.mutate()}
           disabled={anyAiLoading}
@@ -125,7 +126,7 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
                      hover:bg-purple-100 disabled:opacity-50 transition-all"
         >
           {aiSummaryMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-          Résumé IA
+          {t('meeting.btnSummary')}
         </button>
 
         <button
@@ -136,7 +137,7 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
                      hover:bg-blue-100 disabled:opacity-50 transition-all"
         >
           {aiAgendaMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <ChevronDown size={13} />}
-          Ordre du jour
+          {t('meeting.btnAgenda')}
         </button>
 
         <button
@@ -147,7 +148,7 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
                      hover:bg-amber-100 disabled:opacity-50 transition-all"
         >
           {aiTasksMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <ListTodo size={13} />}
-          Tâches
+          {t('meeting.btnTasks')}
         </button>
 
         <button
@@ -158,7 +159,7 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
                      disabled:opacity-50 transition-all"
         >
           {saveMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-          Enregistrer
+          {t('common.save')}
         </button>
       </div>
 
@@ -167,7 +168,7 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200
                         rounded-xl p-4">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-2">
-            {aiSection === 'summary' ? '✨ Résumé IA' : '📋 Ordre du jour suggéré'}
+            {aiSection === 'summary' ? t('meeting.aiSummary') : t('meeting.aiAgenda')}
           </p>
           <p className="text-sm text-surface-800 whitespace-pre-wrap leading-relaxed">{aiContent}</p>
         </div>
@@ -176,14 +177,14 @@ export function MeetingNoteEditor({ meetingId, note, onSaved }: Props) {
       {aiSection === 'tasks' && tasks.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-3">
-            ✅ Tâches détectées
+            {t('meeting.aiTasks')}
           </p>
           <ul className="space-y-2">
-            {tasks.map((t, i) => (
+            {tasks.map((task, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                <span className="text-surface-800">{t.task}</span>
-                {t.due && <span className="text-xs text-amber-600 ml-auto shrink-0">{t.due}</span>}
+                <span className="text-surface-800">{task.task}</span>
+                {task.due && <span className="text-xs text-amber-600 ml-auto shrink-0">{task.due}</span>}
               </li>
             ))}
           </ul>

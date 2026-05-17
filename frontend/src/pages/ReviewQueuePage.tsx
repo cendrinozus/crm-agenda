@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { format, parseISO } from 'date-fns'
-import { fr } from 'date-fns/locale'
 import {
-  CheckCircle, XCircle, UserPlus, ChevronDown, Filter,
+  CheckCircle, XCircle, UserPlus, Filter,
   Loader2, AlertTriangle, Info, Sparkles, RefreshCw
 } from 'lucide-react'
 import { calendarApi, clientsApi } from '../services/api'
+import { useDateLocale } from '../hooks/useDateLocale'
 
 // ── Confidence badge ───────────────────────────────────────────────────────────
 function ConfidenceBadge({ score }: { score: number }) {
@@ -32,29 +33,20 @@ function ConfidenceBadge({ score }: { score: number }) {
 }
 
 function MethodLabel({ method }: { method: string }) {
-  const labels: Record<string, string> = {
-    attendee_name:  'Participant',
-    attendee_email: 'Email participant',
-    session_with:   '"Session with"',
-    with_pattern:   '"With" pattern',
-    avec_pattern:   '"Avec" pattern',
-    keyword_prefix: 'Mot-clé titre',
-    separator:      'Séparateur',
-    bare_title:     'Titre brut',
-    none:           'Non détecté',
-  }
-  return <span className="text-xs text-surface-400">{labels[method] || method}</span>
+  const { t } = useTranslation()
+  const key = `review.methods.${method}` as any
+  return <span className="text-xs text-surface-400">{t(key, { defaultValue: method })}</span>
 }
 
 // ── Assign modal (inline) ──────────────────────────────────────────────────────
 function AssignDropdown({
-  meetingId, clients, onAssign, onClose
+  clients, onAssign, onClose
 }: {
-  meetingId: number
   clients: any[]
   onAssign: (clientId?: number, newName?: string) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
@@ -68,7 +60,7 @@ function AssignDropdown({
           autoFocus
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Nom du client…"
+          placeholder={t('review.clientNamePH')}
           className="w-full px-2.5 py-1.5 text-sm bg-surface-50 border border-surface-200
                      rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400"
         />
@@ -96,14 +88,14 @@ function AssignDropdown({
                        text-brand-600 hover:bg-brand-50 border-t border-surface-100"
           >
             <UserPlus size={13} />
-            Créer « {search} »
+            {t('review.createClient', { name: search })}
           </button>
         )}
       </div>
       <div className="border-t border-surface-100">
         <button onClick={onClose}
           className="w-full px-3 py-2 text-xs text-surface-400 hover:bg-surface-50">
-          Annuler
+          {t('review.cancel')}
         </button>
       </div>
     </div>
@@ -120,6 +112,8 @@ function ReviewRow({
   selected: boolean
   onSelect: (id: number) => void
 }) {
+  const { t } = useTranslation()
+  const dateLocale = useDateLocale()
   const [showAssign, setShowAssign] = useState(false)
   const review = meeting.review
   const dt = meeting.start_time ? parseISO(meeting.start_time) : null
@@ -129,11 +123,9 @@ function ReviewRow({
     <div className={`flex items-start gap-3 px-4 py-3.5 border-b border-surface-100
                      hover:bg-surface-50 transition-colors group
                      ${selected ? 'bg-brand-50' : ''}`}>
-      {/* Checkbox */}
       <input type="checkbox" checked={selected} onChange={() => onSelect(meeting.id)}
         className="mt-0.5 rounded" />
 
-      {/* Event info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <p className="text-sm font-medium text-surface-800 truncate">{meeting.title}</p>
@@ -142,23 +134,22 @@ function ReviewRow({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
           {dt && (
             <span className="text-xs text-surface-500">
-              {format(dt, "d MMM yyyy · HH:mm", { locale: fr })}
+              {format(dt, 'd MMM yyyy · HH:mm', { locale: dateLocale })}
             </span>
           )}
           {review?.detection_method && <MethodLabel method={review.detection_method} />}
         </div>
 
-        {/* Suggested client */}
         {review?.suggested_client && (
           <div className="mt-1.5 flex items-center gap-1.5">
-            <span className="text-xs text-surface-400">Suggestion :</span>
+            <span className="text-xs text-surface-400">{t('review.suggestion')}</span>
             <span className="text-xs font-medium text-surface-700 bg-surface-100
                              px-2 py-0.5 rounded-full">
               {review.suggested_client}
             </span>
             {assignedClient && assignedClient.name !== review.suggested_client && (
               <>
-                <span className="text-xs text-surface-400">→ assigné à</span>
+                <span className="text-xs text-surface-400">{t('review.assignedTo')}</span>
                 <span className="text-xs font-medium text-brand-700 bg-brand-50
                                  px-2 py-0.5 rounded-full">
                   {assignedClient.name}
@@ -169,32 +160,28 @@ function ReviewRow({
         )}
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-1.5 shrink-0 relative">
-        {/* Confirm */}
         <button
           onClick={() => onAction(meeting.id, 'confirm')}
-          title="Confirmer le client détecté"
+          title={t('review.confirmTooltip')}
           className="p-1.5 rounded-lg text-surface-400 hover:text-green-600
                      hover:bg-green-50 transition-all"
         >
           <CheckCircle size={16} />
         </button>
 
-        {/* Assign to different client */}
         <button
           onClick={() => setShowAssign(v => !v)}
-          title="Assigner à un autre client"
+          title={t('review.assignTooltip')}
           className="p-1.5 rounded-lg text-surface-400 hover:text-brand-600
                      hover:bg-brand-50 transition-all"
         >
           <UserPlus size={16} />
         </button>
 
-        {/* Exclude */}
         <button
           onClick={() => onAction(meeting.id, 'exclude')}
-          title="Exclure (événement interne)"
+          title={t('review.excludeTooltip')}
           className="p-1.5 rounded-lg text-surface-400 hover:text-red-500
                      hover:bg-red-50 transition-all"
         >
@@ -203,7 +190,6 @@ function ReviewRow({
 
         {showAssign && (
           <AssignDropdown
-            meetingId={meeting.id}
             clients={clients}
             onAssign={(clientId, newName) =>
               onAction(meeting.id, 'assign', { client_id: clientId, new_client_name: newName })
@@ -218,10 +204,10 @@ function ReviewRow({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export function ReviewQueuePage() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
-  const [filter, setFilter]       = useState<'all' | 'low' | 'medium'>('all')
-  const [selected, setSelected]   = useState<Set<number>>(new Set())
-  const [bulkAction, setBulkAction] = useState('')
+  const [filter, setFilter]   = useState<'all' | 'low' | 'medium'>('all')
+  const [selected, setSelected] = useState<Set<number>>(new Set())
 
   const { data: meetings = [], isLoading, refetch } = useQuery({
     queryKey: ['review-queue'],
@@ -282,7 +268,7 @@ export function ReviewQueuePage() {
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-64 gap-3 text-surface-400 text-sm">
-      <Loader2 className="animate-spin" size={18} /> Chargement de la file de révision…
+      <Loader2 className="animate-spin" size={18} /> {t('review.loading')}
     </div>
   )
 
@@ -292,16 +278,16 @@ export function ReviewQueuePage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-display text-2xl text-surface-900 mb-1">
-            File de validation
+            {t('review.title')}
           </h1>
           <p className="text-sm text-surface-500">
-            {meetings.length} événement{meetings.length > 1 ? 's' : ''} nécessitent votre validation
+            {t('review.subtitle', { count: meetings.length })}
           </p>
         </div>
         <button onClick={() => refetch()}
           className="flex items-center gap-2 px-3 py-2 rounded-xl border border-surface-200
                      text-sm text-surface-600 hover:bg-surface-50 transition-colors">
-          <RefreshCw size={14} /> Actualiser
+          <RefreshCw size={14} /> {t('common.refresh')}
         </button>
       </div>
 
@@ -309,8 +295,8 @@ export function ReviewQueuePage() {
         <div className="bg-white rounded-2xl border border-surface-200 shadow-card
                         p-12 text-center text-surface-400">
           <CheckCircle size={40} className="mx-auto mb-3 text-green-400" />
-          <p className="font-medium text-surface-700">Tout est validé !</p>
-          <p className="text-sm mt-1">Aucun événement en attente de révision.</p>
+          <p className="font-medium text-surface-700">{t('review.allValidated')}</p>
+          <p className="text-sm mt-1">{t('review.noEvents')}</p>
         </div>
       )}
 
@@ -320,9 +306,9 @@ export function ReviewQueuePage() {
           <div className="flex items-center gap-2 mb-4">
             <Filter size={14} className="text-surface-400" />
             {([
-              { key: 'all',    label: 'Tous',              count: counts.all },
-              { key: 'medium', label: 'Confiance moyenne', count: counts.medium },
-              { key: 'low',    label: 'Confiance faible',  count: counts.low },
+              { key: 'all',    label: t('review.all'),              count: counts.all },
+              { key: 'medium', label: t('review.mediumConfidence'), count: counts.medium },
+              { key: 'low',    label: t('review.lowConfidence'),    count: counts.low },
             ] as const).map(tab => (
               <button
                 key={tab.key}
@@ -346,7 +332,7 @@ export function ReviewQueuePage() {
             <div className="flex items-center gap-3 bg-brand-50 border border-brand-200
                             rounded-xl px-4 py-2.5 mb-4">
               <span className="text-sm font-medium text-brand-700">
-                {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+                {t('review.selected', { count: selected.size })}
               </span>
               <div className="flex-1" />
               <button
@@ -355,7 +341,7 @@ export function ReviewQueuePage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
                            bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
               >
-                <CheckCircle size={13} /> Confirmer tous
+                <CheckCircle size={13} /> {t('review.confirmAll')}
               </button>
               <button
                 onClick={() => bulkMutation.mutate({ ids: [...selected], action: 'exclude' })}
@@ -363,26 +349,24 @@ export function ReviewQueuePage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
                            bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
               >
-                <XCircle size={13} /> Exclure tous
+                <XCircle size={13} /> {t('review.excludeAll')}
               </button>
             </div>
           )}
 
           {/* Table */}
           <div className="bg-white rounded-2xl border border-surface-200 shadow-card overflow-hidden">
-            {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-50 border-b border-surface-200">
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
               <span className="text-xs font-medium text-surface-500 uppercase tracking-wider">
-                Événement
+                {t('review.event')}
               </span>
               <div className="flex-1" />
               <span className="text-xs font-medium text-surface-500 uppercase tracking-wider">
-                Actions
+                {t('review.actions')}
               </span>
             </div>
 
-            {/* Rows */}
             {filtered.map((m: any) => (
               <ReviewRow
                 key={m.id}
@@ -396,7 +380,7 @@ export function ReviewQueuePage() {
 
             {filtered.length === 0 && (
               <p className="text-center text-sm text-surface-400 py-8">
-                Aucun événement dans ce filtre
+                {t('review.noEventsInFilter')}
               </p>
             )}
           </div>
@@ -404,13 +388,13 @@ export function ReviewQueuePage() {
           {/* Legend */}
           <div className="mt-4 flex flex-wrap gap-4 text-xs text-surface-400">
             <span className="flex items-center gap-1.5">
-              <CheckCircle size={12} className="text-green-500" /> Confirmer la détection automatique
+              <CheckCircle size={12} className="text-green-500" /> {t('review.confirmDetection')}
             </span>
             <span className="flex items-center gap-1.5">
-              <UserPlus size={12} className="text-brand-500" /> Assigner à un autre client
+              <UserPlus size={12} className="text-brand-500" /> {t('review.assignClient')}
             </span>
             <span className="flex items-center gap-1.5">
-              <XCircle size={12} className="text-red-400" /> Marquer comme événement interne (exclure)
+              <XCircle size={12} className="text-red-400" /> {t('review.markInternal')}
             </span>
           </div>
         </>

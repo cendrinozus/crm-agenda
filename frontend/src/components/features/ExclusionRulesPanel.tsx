@@ -1,23 +1,24 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, ToggleLeft, ToggleRight, Shield, Info } from 'lucide-react'
 import { calendarApi } from '../../services/api'
 
-// Built-in defaults (display only, non-editable)
-const BUILTIN_EXAMPLES = [
-  { pattern: '^CC$',              label: 'Bloc CC (réunion interne récurrente)' },
-  { pattern: '^Office H.*',       label: 'Office Hours' },
-  { pattern: '\\[.*Off\\]',       label: 'Blocs Off / Pause' },
-  { pattern: '.*hour buffer.*',   label: 'Buffer de temps' },
-  { pattern: '^(lunch|déjeuner)', label: 'Repas' },
-  { pattern: '^Mother.*Day',      label: 'Fêtes / jours fériés' },
-]
-
 export function ExclusionRulesPanel() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [pattern, setPattern] = useState('')
   const [label,   setLabel]   = useState('')
   const [error,   setError]   = useState('')
+
+  const BUILTIN_EXAMPLES = [
+    { pattern: '^CC$',              label: t('exclusions.builtins.cc') },
+    { pattern: '^Office H.*',       label: t('exclusions.builtins.officeHours') },
+    { pattern: '\\[.*Off\\]',       label: t('exclusions.builtins.off') },
+    { pattern: '.*hour buffer.*',   label: t('exclusions.builtins.buffer') },
+    { pattern: '^(lunch|déjeuner)', label: t('exclusions.builtins.meals') },
+    { pattern: '^Mother.*Day',      label: t('exclusions.builtins.holidays') },
+  ]
 
   const { data: rules = [] } = useQuery({
     queryKey: ['exclusions'],
@@ -32,7 +33,7 @@ export function ExclusionRulesPanel() {
       setLabel('')
       setError('')
     },
-    onError: (err: any) => setError(err.response?.data?.error || 'Erreur'),
+    onError: (err: any) => setError(err.response?.data?.error || t('common.error')),
   })
 
   const deleteMutation = useMutation({
@@ -46,7 +47,7 @@ export function ExclusionRulesPanel() {
   })
 
   const handleAdd = () => {
-    if (!pattern.trim()) { setError('Le pattern est requis'); return }
+    if (!pattern.trim()) { setError(t('exclusions.patternRequired')); return }
     createMutation.mutate({ pattern: pattern.trim(), label: label.trim() || pattern.trim() })
   }
 
@@ -55,18 +56,14 @@ export function ExclusionRulesPanel() {
       {/* Info banner */}
       <div className="flex gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
         <Info size={16} className="shrink-0 mt-0.5" />
-        <div>
-          Les règles d'exclusion utilisent des <strong>expressions régulières</strong>.
-          Les événements correspondants seront ignorés lors de la synchronisation.
-          Des règles par défaut couvrent déjà les patterns courants (CC, buffer, repas…).
-        </div>
+        <div dangerouslySetInnerHTML={{ __html: t('exclusions.info') }} />
       </div>
 
       {/* Built-in rules */}
       <div>
         <p className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-2">
           <Shield size={12} className="inline mr-1" />
-          Règles intégrées (non modifiables)
+          {t('exclusions.builtIn')}
         </p>
         <div className="bg-surface-50 rounded-xl border border-surface-200 divide-y divide-surface-100">
           {BUILTIN_EXAMPLES.map((r, i) => (
@@ -75,7 +72,7 @@ export function ExclusionRulesPanel() {
                 {r.pattern}
               </code>
               <span className="text-xs text-surface-500 flex-1">{r.label}</span>
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Actif</span>
+              <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{t('exclusions.active')}</span>
             </div>
           ))}
         </div>
@@ -84,12 +81,12 @@ export function ExclusionRulesPanel() {
       {/* User rules */}
       <div>
         <p className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-2">
-          Vos règles personnalisées
+          {t('exclusions.custom')}
         </p>
 
         {rules.length === 0 && (
           <p className="text-sm text-surface-400 py-4 text-center border border-dashed border-surface-200 rounded-xl">
-            Aucune règle personnalisée · Ajoutez-en ci-dessous
+            {t('exclusions.noCustom')}
           </p>
         )}
 
@@ -122,7 +119,7 @@ export function ExclusionRulesPanel() {
             <input
               value={pattern}
               onChange={e => { setPattern(e.target.value); setError('') }}
-              placeholder="Pattern regex, ex: ^TT Live$"
+              placeholder={t('exclusions.patternPH')}
               className="w-full px-3 py-2 text-sm border border-surface-200 rounded-xl
                          bg-surface-50 focus:outline-none focus:ring-2 focus:ring-brand-400
                          font-mono"
@@ -132,7 +129,7 @@ export function ExclusionRulesPanel() {
             <input
               value={label}
               onChange={e => setLabel(e.target.value)}
-              placeholder="Description (optionnel)"
+              placeholder={t('exclusions.labelPH')}
               className="w-full px-3 py-2 text-sm border border-surface-200 rounded-xl
                          bg-surface-50 focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
@@ -143,7 +140,7 @@ export function ExclusionRulesPanel() {
             className="flex items-center gap-1.5 px-4 py-2 bg-surface-900 text-white
                        rounded-xl text-sm hover:bg-surface-700 disabled:opacity-50 transition-colors"
           >
-            <Plus size={14} /> Ajouter
+            <Plus size={14} /> {t('exclusions.add')}
           </button>
         </div>
         {error && <p className="text-xs text-red-500 mt-1">{error}</p>}

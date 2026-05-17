@@ -1,9 +1,10 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, Settings, LogOut, RefreshCw, Search,
-  ChevronRight, Loader2, ClipboardCheck
+  ChevronRight, Loader2, ClipboardCheck, Globe
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import { loadSteps, getStepProgress, getStepLabel } from '../../hooks/useWorkflowSteps'
@@ -17,6 +18,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
+  const { t, i18n } = useTranslation()
 
   const { data: clients } = useQuery({
     queryKey: ['clients', search],
@@ -40,6 +42,10 @@ export function AppLayout() {
     },
   })
 
+  const toggleLang = () => {
+    i18n.changeLanguage(i18n.language === 'en' ? 'fr' : 'en')
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-surface-50">
       {/* Sidebar */}
@@ -47,8 +53,8 @@ export function AppLayout() {
         {/* Header */}
         <div className="px-5 pt-6 pb-4 border-b border-navy-700">
           <div className="flex items-center gap-2.5 mb-1">
-            <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
-            <span className="font-display text-xl text-white">WINNER'S CIRCLE <span className="text-brand-400">- AGENDA</span></span>
+            <img src={logo} alt="Flying Wings" className="w-9 h-9 object-contain rounded-lg shrink-0" />
+            <span className="font-display text-xl text-white">Flying <span className="text-brand-400">Wings</span></span>
           </div>
           {user && (
             <p className="text-xs text-white/50 ml-10 truncate">{user.email}</p>
@@ -62,7 +68,7 @@ export function AppLayout() {
               isActive ? 'bg-white/10 text-brand-400' : 'text-white/70 hover:bg-white/10 hover:text-white'
             }`
           }>
-            <LayoutDashboard size={16} /> Tableau de bord
+            <LayoutDashboard size={16} /> {t('nav.dashboard')}
           </NavLink>
 
           {/* Review queue with badge */}
@@ -72,7 +78,7 @@ export function AppLayout() {
             }`
           }>
             <ClipboardCheck size={16} />
-            <span className="flex-1">À valider</span>
+            <span className="flex-1">{t('nav.review')}</span>
             {pendingCount > 0 && (
               <span className="bg-brand-500 text-white text-xs font-semibold
                                px-2 py-0.5 rounded-full min-w-[20px] text-center">
@@ -86,7 +92,7 @@ export function AppLayout() {
               isActive ? 'bg-white/10 text-brand-400' : 'text-white/70 hover:bg-white/10 hover:text-white'
             }`
           }>
-            <Settings size={16} /> Paramètres
+            <Settings size={16} /> {t('nav.settings')}
           </NavLink>
         </nav>
 
@@ -102,11 +108,11 @@ export function AppLayout() {
             {syncMutation.isPending
               ? <Loader2 size={14} className="animate-spin" />
               : <RefreshCw size={14} />}
-            {syncMutation.isPending ? 'Synchronisation…' : 'Synchroniser Calendar'}
+            {syncMutation.isPending ? t('nav.syncing') : t('nav.syncCalendar')}
           </button>
           {syncMutation.isSuccess && (
             <p className="text-xs text-center text-green-400 mt-1">
-              ✓ {calStatus?.total_synced ?? 0} sync · {calStatus?.pending_review ?? 0} à valider
+              ✓ {t('nav.syncDone', { synced: calStatus?.total_synced ?? 0, pending: calStatus?.pending_review ?? 0 })}
             </p>
           )}
         </div>
@@ -119,7 +125,7 @@ export function AppLayout() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher un client…"
+                placeholder={t('nav.searchClient')}
                 className="w-full pl-8 pr-3 py-1.5 text-sm text-white bg-white/10 border border-white/20
                            rounded-xl placeholder-white/40 focus:outline-none focus:ring-2
                            focus:ring-brand-400 focus:bg-white/15 transition"
@@ -129,7 +135,7 @@ export function AppLayout() {
 
           <div className="px-2 mb-1">
             <span className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
-              Clients · {clients?.length ?? 0}
+              {t('nav.clients', { count: clients?.length ?? 0 })}
             </span>
           </div>
 
@@ -150,7 +156,7 @@ export function AppLayout() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{c.name}</p>
-                  <p className="text-xs text-white/50">{c.total_meetings} RDV</p>
+                  <p className="text-xs text-white/50">{t('nav.meetings', { count: c.total_meetings })}</p>
                   {c.workflow_stage && (() => {
                     const pct   = getStepProgress(_steps, c.workflow_stage)
                     const label = getStepLabel(_steps, c.workflow_stage)
@@ -175,20 +181,31 @@ export function AppLayout() {
             ))}
             {clients?.length === 0 && (
               <p className="text-xs text-white/40 text-center py-8 px-4">
-                Aucun client · Synchronisez votre Google Calendar
+                {t('nav.noClients')}
               </p>
             )}
           </div>
         </div>
 
         {/* User footer */}
-        <div className="px-3 py-3 border-t border-white/10 flex items-center gap-3">
+        <div className="px-3 py-3 border-t border-white/10 flex items-center gap-2">
           {user?.picture
             ? <img src={user.picture} className="w-7 h-7 rounded-full" alt="" />
             : <div className="w-7 h-7 rounded-full bg-brand-500/20 flex items-center justify-center text-xs font-medium text-brand-400">
                 {user?.name?.[0]}
               </div>}
           <span className="flex-1 text-sm text-white/80 truncate">{user?.name}</span>
+
+          {/* Language toggle */}
+          <button
+            onClick={toggleLang}
+            title={i18n.language === 'en' ? 'Switch to French' : 'Passer en anglais'}
+            className="flex items-center gap-1 text-white/40 hover:text-white/80 transition-colors text-xs px-1"
+          >
+            <Globe size={13} />
+            {i18n.language.toUpperCase()}
+          </button>
+
           <button onClick={logout} className="text-white/30 hover:text-red-400 transition-colors">
             <LogOut size={15} />
           </button>

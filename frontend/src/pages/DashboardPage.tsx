@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { format, parseISO, isPast, isToday } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
+import { format, parseISO, isToday } from 'date-fns'
 import { clientsApi } from '../services/api'
 import { useAuthStore } from '../store/authStore'
-import { CalendarCheck, Users, Clock, ArrowRight, TrendingUp } from 'lucide-react'
+import { useDateLocale } from '../hooks/useDateLocale'
+import { CalendarCheck, Users, Clock, ArrowRight } from 'lucide-react'
+import logoLight from '../assets/logo-light.png'
 
 function StatCard({ icon: Icon, label, value, color }: any) {
   return (
@@ -21,6 +23,9 @@ function StatCard({ icon: Icon, label, value, color }: any) {
 export function DashboardPage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const dateLocale = useDateLocale()
+
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: () => clientsApi.list().then(r => r.data),
@@ -46,32 +51,35 @@ export function DashboardPage() {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       {/* Greeting */}
-      <div className="mb-8">
-        <h1 className="font-display text-3xl text-surface-900">
-          Bonjour, {user?.name?.split(' ')[0]} 👋
-        </h1>
-        <p className="text-surface-500 mt-1">
-          {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
-        </p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="font-display text-3xl text-surface-900">
+            {t('dashboard.greeting', { name: user?.name?.split(' ')[0] })}
+          </h1>
+          <p className="text-surface-500 mt-1">
+            {format(new Date(), 'EEEE d MMMM yyyy', { locale: dateLocale })}
+          </p>
+        </div>
+        <img src={logoLight} alt="Flying Wings" className="w-16 h-16 object-contain opacity-90" />
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard icon={Users}         label="Clients suivis"  value={clients.length} color="bg-brand-500" />
-        <StatCard icon={CalendarCheck} label="Rendez-vous total" value={totalMeetings}  color="bg-emerald-500" />
-        <StatCard icon={Clock}         label="RDV à venir"     value={withUpcoming}   color="bg-amber-500" />
+        <StatCard icon={Users}         label={t('dashboard.clientsTracked')} value={clients.length} color="bg-brand-500" />
+        <StatCard icon={CalendarCheck} label={t('dashboard.totalMeetings')}  value={totalMeetings}  color="bg-emerald-500" />
+        <StatCard icon={Clock}         label={t('client.upcoming')}          value={withUpcoming}   color="bg-amber-500" />
       </div>
 
       <div className="grid grid-cols-5 gap-6">
         {/* Upcoming meetings */}
         <div className="col-span-3">
           <h2 className="text-sm font-semibold text-surface-700 uppercase tracking-wider mb-3">
-            Prochains rendez-vous
+            {t('dashboard.upcomingMeetings')}
           </h2>
           <div className="space-y-2">
             {upcoming.length === 0 && !isLoading && (
               <div className="bg-white rounded-2xl border border-surface-200 p-6 text-center text-sm text-surface-400">
-                Synchronisez votre agenda pour voir vos prochains RDV
+                {t('dashboard.syncPrompt')}
               </div>
             )}
             {upcoming.map((c: any) => {
@@ -98,10 +106,10 @@ export function DashboardPage() {
                   </div>
                   <div className="text-right shrink-0">
                     {todayFlag
-                      ? <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Aujourd'hui</span>
-                      : <span className="text-xs text-surface-600">{format(dt, "d MMM", { locale: fr })}</span>
+                      ? <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{t('common.today')}</span>
+                      : <span className="text-xs text-surface-600">{format(dt, 'd MMM', { locale: dateLocale })}</span>
                     }
-                    <p className="text-xs text-surface-400 mt-0.5">{format(dt, "HH:mm")}</p>
+                    <p className="text-xs text-surface-400 mt-0.5">{format(dt, 'HH:mm')}</p>
                   </div>
                   <ArrowRight size={14} className="text-surface-300 group-hover:text-brand-400 shrink-0 transition-colors" />
                 </div>
@@ -113,7 +121,7 @@ export function DashboardPage() {
         {/* Recent clients */}
         <div className="col-span-2">
           <h2 className="text-sm font-semibold text-surface-700 uppercase tracking-wider mb-3">
-            Clients récents
+            {t('dashboard.recentClients')}
           </h2>
           <div className="bg-white rounded-2xl border border-surface-200 shadow-card divide-y divide-surface-100">
             {recent.map((c: any) => (
@@ -134,12 +142,12 @@ export function DashboardPage() {
                   <p className="text-sm font-medium text-surface-800 truncate">{c.name}</p>
                 </div>
                 <p className="text-xs text-surface-400 shrink-0">
-                  {c.last_meeting && format(parseISO(c.last_meeting.start_time), "d MMM", { locale: fr })}
+                  {c.last_meeting && format(parseISO(c.last_meeting.start_time), 'd MMM', { locale: dateLocale })}
                 </p>
               </button>
             ))}
             {recent.length === 0 && (
-              <p className="text-sm text-surface-400 text-center py-8 px-4">Aucun client encore</p>
+              <p className="text-sm text-surface-400 text-center py-8 px-4">{t('dashboard.noClients')}</p>
             )}
           </div>
         </div>
