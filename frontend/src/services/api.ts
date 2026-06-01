@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+// En production, BASE_URL = /agenda/ (injecté par vite base config)
+// En dev, BASE_URL = /
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.BASE_URL + 'api',
   withCredentials: true,
 })
 
@@ -22,7 +24,7 @@ api.interceptors.response.use(
       const refresh = localStorage.getItem('refresh_token')
       if (refresh) {
         try {
-          const { data } = await axios.post('/api/auth/refresh', {}, {
+          const { data } = await axios.post(import.meta.env.BASE_URL + 'api/auth/refresh', {}, {
             headers: { Authorization: `Bearer ${refresh}` },
           })
           localStorage.setItem('access_token', data.access_token)
@@ -30,7 +32,7 @@ api.interceptors.response.use(
           return api(original)
         } catch {
           localStorage.clear()
-          window.location.href = '/login'
+          window.location.href = import.meta.env.BASE_URL + 'login'
         }
       }
     }

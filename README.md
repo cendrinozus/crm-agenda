@@ -30,7 +30,7 @@ crm-agenda/
 │
 ├── frontend/                   # React + TypeScript
 │   ├── src/
-│   │   ├── App.tsx             # Routing
+│   │   ├── App.tsx             # Routing (basename=/agenda en prod)
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx
 │   │   │   ├── AuthCallbackPage.tsx
@@ -43,15 +43,17 @@ crm-agenda/
 │   │   │   └── features/
 │   │   │       ├── VoiceRecorder.tsx     # Enregistrement + transcription
 │   │   │       └── MeetingNoteEditor.tsx # Notes + IA
-│   │   ├── services/api.ts     # Axios + tous les endpoints
+│   │   ├── services/api.ts     # Axios + tous les endpoints (base path dynamique)
 │   │   └── store/authStore.ts  # Zustand auth
 │   ├── package.json
 │   ├── tailwind.config.js
-│   ├── Dockerfile
+│   ├── vite.config.ts          # base path lu depuis VITE_BASE (env)
+│   ├── Dockerfile              # ARG VITE_BASE=/agenda/
 │   └── nginx.conf
 │
 ├── docs/schema.sql             # Schéma MySQL de référence
-└── docker-compose.yml
+├── docker-compose.yml          # Réseau externe wcercle_net (pas de ports exposés)
+└── deploy.sh                   # Script de déploiement VPS
 ```
 
 ---
@@ -75,8 +77,12 @@ crm-agenda/
    - `Google+ API` (pour le profil)
 4. **APIs & Services → Identifiants → Créer des identifiants → ID client OAuth 2.0**
    - Type : Application Web
-   - Origines autorisées : `http://localhost:3000`
-   - URI de redirection : `http://localhost:5000/auth/google/callback`
+   - Origines autorisées :
+     - `http://localhost:3000` (dev)
+     - `https://winners-circle.vip` (prod)
+   - URI de redirection :
+     - `http://localhost:5000/auth/google/callback` (dev)
+     - `https://winners-circle.vip/agenda/api/auth/google/callback` (prod)
 5. Notez `Client ID` et `Client Secret`
 
 ---
@@ -128,9 +134,8 @@ Le frontend écoute sur http://localhost:3000
 
 ### 4. Variables d'environnement importantes
 
+**Développement local** (`backend/.env`) :
 ```env
-# backend/.env
-
 FLASK_SECRET_KEY=changez-en-production-32chars+
 JWT_SECRET_KEY=changez-en-production-32chars+
 ENCRYPTION_KEY=généré-avec-Fernet.generate_key()
@@ -147,6 +152,24 @@ DATABASE_URL=mysql+pymysql://root:password@localhost:3306/crm_agenda
 FRONTEND_URL=http://localhost:3000
 ```
 
+**Production VPS** (`backend/.env`) :
+```env
+FLASK_SECRET_KEY=<clé longue et aléatoire>
+JWT_SECRET_KEY=<clé longue et aléatoire>
+ENCRYPTION_KEY=<généré avec Fernet.generate_key()>
+
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
+
+ANTHROPIC_API_KEY=sk-ant-xxxx
+OPENAI_API_KEY=sk-xxxx
+
+TRANSCRIPTION_PROVIDER=whisper
+
+DATABASE_URL=mysql+pymysql://crm_user:${MYSQL_PASSWORD}@mysql:3306/crm_agenda
+FRONTEND_URL=https://winners-circle.vip/agenda
+```
+
 Générer une clé Fernet :
 ```python
 from cryptography.fernet import Fernet
@@ -155,14 +178,97 @@ print(Fernet.generate_key().decode())
 
 ---
 
-### 5. Docker Compose (production)
+### 5. Docker Compose — développement local
 
 ```bash
 # Copier .env.example → backend/.env et remplir
-docker-compose up -d
+docker compose up -d
 ```
 
 Accès : http://localhost:3000
+
+---
+
+## Déploiement VPS — winners-circle.vip/agenda
+
+L'application est déployée en sous-chemin `/agenda` du domaine existant `winners-circle.vip`.  
+Le Nginx du projet [w-circle](https://github.com/cendrinozus/w-circle) fait office de reverse proxy unique (ports 80/443).
+
+### Architecture réseau
+
+```
+Internet → wcercle Nginx (ports 80/443)
+              ├── /                  → site w-circle (statique)
+              ├── /agenda/api/*      → crm_backend:5000  (Flask, strip préfixe)
+              └── /agenda/*          → crm_frontend:80   (Nginx React SPA, strip préfixe)
+```
+
+Les conteneurs communiquent via le réseau Docker externe **`wcercle_net`**.  
+Aucun port n'est exposé directement sur le host par crm-agenda.
+
+### Prérequis
+
+- VPS Debian/Ubuntu avec Docker installé
+- Projet `w-circle` déjà déployé sous `/opt/wcercle` avec HTTPS actif
+- DNS `winners-circle.vip` pointant vers le VPS
+
+### Procédure
+
+```bash
+# ── 1. Créer le réseau Docker partagé (une seule fois) ─────────────────────
+docker network create wcercle_net
+
+# ── 2. Mettre à jour w-circle (depuis le repo git sur le VPS) ──────────────
+cd ~/w-circle/w-circle
+git pull
+
+cp -f docs/nginx-https.conf /opt/wcercle/docs/nginx-https.conf
+cp -f docs/nginx-http.conf  /opt/wcercle/docs/nginx-http.conf
+cp -f docker-compose.yml    /opt/wcercle/docker-compose.yml
+
+# Regénérer nginx-active.conf (nginx-https.conf est un template avec le mot-clé
+# DOMAIN ; nginx-active.conf est le fichier réellement monté dans le conteneur)
+cd /opt/wcercle
+sed "s/DOMAIN/winners-circle.vip/g" docs/nginx-https.conf \
+    | sudo tee docs/nginx-active.conf > /dev/null
+
+# Recréer le conteneur web pour qu'il rejoigne wcercle_net
+docker compose up -d --force-recreate web
+
+# Vérifier que wcercle est bien sur le réseau
+docker network inspect wcercle_net
+
+# ── 3. Cloner et déployer crm-agenda ───────────────────────────────────────
+git clone https://github.com/cendrinozus/crm-agenda.git ~/crm-agenda
+cd ~/crm-agenda
+
+# Remplir le .env de production
+cp backend/.env.example backend/.env
+nano backend/.env   # FRONTEND_URL=https://winners-circle.vip/agenda
+
+# Lancer le script de déploiement (build, démarre, recharge Nginx)
+sudo bash deploy.sh
+```
+
+Accès : **https://winners-circle.vip/agenda**
+
+### Mise à jour
+
+```bash
+cd ~/crm-agenda
+git pull
+sudo bash deploy.sh
+```
+
+### Commandes utiles (depuis `/opt/crm-agenda`)
+
+```bash
+docker compose ps                  # état des conteneurs
+docker compose logs -f backend     # logs Flask
+docker compose logs -f frontend    # logs Nginx frontend
+docker compose down                # arrêter
+docker compose up -d --build       # rebuild + redémarrer
+```
 
 ---
 

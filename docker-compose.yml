@@ -10,8 +10,6 @@ services:
       MYSQL_DATABASE: crm_agenda
       MYSQL_USER: crm_user
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
-    ports:
-      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -19,13 +17,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
 
   redis:
     image: redis:7-alpine
     container_name: crm_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    networks:
+      - internal
 
   backend:
     build:
@@ -37,8 +37,6 @@ services:
     environment:
       DATABASE_URL: mysql+pymysql://crm_user:${MYSQL_PASSWORD:-password}@mysql:3306/crm_agenda
       REDIS_URL: redis://redis:6379/0
-    ports:
-      - "5000:5000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -46,6 +44,9 @@ services:
         condition: service_started
     volumes:
       - ./backend/uploads:/app/uploads
+    networks:
+      - internal
+      - wcercle_net
 
   frontend:
     build:
@@ -53,10 +54,16 @@ services:
       dockerfile: Dockerfile
     container_name: crm_frontend
     restart: unless-stopped
-    ports:
-      - "3000:80"
     depends_on:
       - backend
+    networks:
+      - internal
+      - wcercle_net
+
+networks:
+  internal:
+  wcercle_net:
+    external: true
 
 volumes:
   mysql_data:
