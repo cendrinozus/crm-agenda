@@ -20,8 +20,10 @@ fi
 echo "[2/4] Copie vers $DEPLOY_DIR..."
 if [ "$REPO_DIR" != "$DEPLOY_DIR" ]; then
     mkdir -p "$DEPLOY_DIR"
-    rsync -a --exclude='node_modules' --exclude='.git' --exclude='frontend/dist' \
-        "$REPO_DIR/" "$DEPLOY_DIR/"
+    cp -a "$REPO_DIR/." "$DEPLOY_DIR/"
+    rm -rf "$DEPLOY_DIR/frontend/node_modules" \
+           "$DEPLOY_DIR/frontend/dist" \
+           "$DEPLOY_DIR/.git"
 fi
 
 # ── 3. Build et démarrage des conteneurs ──────────────────────────────────
