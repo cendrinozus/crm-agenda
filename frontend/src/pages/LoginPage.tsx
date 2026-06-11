@@ -5,7 +5,7 @@ export function LoginPage() {
   const { t } = useTranslation()
 
   const handleLogin = () => {
-    window.location.href = '/api/auth/google'
+    window.location.href = import.meta.env.BASE_URL + 'api/auth/google'
   }
 
   return (

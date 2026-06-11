@@ -39,6 +39,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
   logout() {
     localStorage.clear()
     set({ user: null })
-    window.location.href = '/login'
+    window.location.href = import.meta.env.BASE_URL + 'login'
   },
 }))
