@@ -4,6 +4,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .models import db
 from .routes.auth import auth_bp
@@ -19,6 +20,8 @@ load_dotenv()
 
 def create_app(config_name=None):
     app = Flask(__name__)
+    # Derrière nginx (reverse proxy), faire confiance à X-Forwarded-Proto/Host
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
     # ── Configuration ──────────────────────────────────────────────────────────
     app.config["SECRET_KEY"] = os.environ["FLASK_SECRET_KEY"]
